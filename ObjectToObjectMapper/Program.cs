@@ -30,7 +30,7 @@ namespace ObjectToObjectMapper
                               {
                                     new MapperUnoptimized(),
                                     new MapperOptimized(),
-                                    //new MapperDynamicCode(),
+                                    new MapperDynamicCode(),
                                     new MapperLcg()
                               };
 
@@ -54,15 +54,6 @@ namespace ObjectToObjectMapper
                 var time = stopper.ElapsedMilliseconds / (double)100000;
                 Console.WriteLine(mapper.GetType().Name + ": " + time);
             }
-        }
-
-        private class OrderModel
-        {
-            public int Id { get; set; }
-            public string CustomerName { get; set; }
-            public string DeliveryAddress { get; set; }
-            public string OrderReference { get; set; }
-            public DateTime EstimatedDeliveryDate { get; set; }
         }
     }
 }

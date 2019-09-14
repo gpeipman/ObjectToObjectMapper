@@ -31,9 +31,9 @@ namespace ObjectToObjectMapper
         protected virtual string GetMapKey(Type sourceType, Type targetType)
         {
             var keyName = "Copy_";
-            keyName += sourceType.FullName.Replace(".", "_");
+            keyName += sourceType.FullName.Replace(".", "_").Replace("+", "_");
             keyName += "_";
-            keyName += targetType.FullName.Replace(".", "_");
+            keyName += targetType.FullName.Replace(".", "_").Replace("+", "_");
 
             return keyName;
         }

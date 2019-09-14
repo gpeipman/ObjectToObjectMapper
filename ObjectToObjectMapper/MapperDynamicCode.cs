@@ -1,16 +1,19 @@
 ﻿using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text;
-using Microsoft.CSharp;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Emit;
 
 namespace ObjectToObjectMapper
 {
     public class MapperDynamicCode : ObjectCopyBase
     {
-        private readonly Dictionary<string, Type> _comp =
-        new Dictionary<string, Type>();
+        private readonly Dictionary<string, Type> _comp = new Dictionary<string, Type>();
 
         public override void MapTypes(Type source, Type target)
         {
@@ -21,14 +24,15 @@ namespace ObjectToObjectMapper
             }
 
             var builder = new StringBuilder();
+            builder.AppendLine("using ObjectToObjectMapper;\r\n");
             builder.Append("namespace Copy {\r\n");
             builder.Append("    public class ");
             builder.Append(key);
             builder.Append(" {\r\n");
             builder.Append("        public static void CopyProps(");
-            builder.Append(source.FullName);
+            builder.Append(target.FullName.Replace("+", "."));
             builder.Append(" source, ");
-            builder.Append(target.FullName);
+            builder.Append(target.FullName.Replace("+", "."));
             builder.Append(" target) {\r\n");
 
             var map = GetMatchingProperties(source, target);
@@ -44,25 +48,33 @@ namespace ObjectToObjectMapper
 
             builder.Append("        }\r\n   }\r\n}");
 
-            // Write out method body
-            //Debug.WriteLine(builder.ToString());
+            var syntaxTree = CSharpSyntaxTree.ParseText(builder.ToString());
 
-            var myCodeProvider = new CSharpCodeProvider();
-            var myCodeCompiler = myCodeProvider.CreateCompiler();
-            var myCompilerParameters = new CompilerParameters();
-            myCompilerParameters.ReferencedAssemblies.Add(this.GetType().Assembly.Location);
-            myCompilerParameters.GenerateInMemory = true;
-            
-            var results = myCodeCompiler.CompileAssemblyFromSource(myCompilerParameters, builder.ToString());
+            string assemblyName = Path.GetRandomFileName();
+            var refPaths = new[] {
+                typeof(System.Object).GetTypeInfo().Assembly.Location,
+                typeof(Console).GetTypeInfo().Assembly.Location,
+                Path.Combine(Path.GetDirectoryName(typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly.Location), "System.Runtime.dll"),
+                this.GetType().GetTypeInfo().Assembly.Location
+            };
 
-            // Compiler output
-            //foreach (var line in results.Output)
-            //{
-            //    Debug.WriteLine(line);
-            //}
+            MetadataReference[] references = refPaths.Select(r => MetadataReference.CreateFromFile(r)).ToArray();
 
-            var copierType = results.CompiledAssembly.GetType("Copy." + key);
-            _comp.Add(key, copierType);
+            var compilation = CSharpCompilation.Create(
+                assemblyName,
+                syntaxTrees: new[] { syntaxTree },
+                references: references,
+                options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+            using(var ms = new MemoryStream())
+            {
+                EmitResult result = compilation.Emit(ms);
+                ms.Seek(0, SeekOrigin.Begin);
+
+                Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
+                var type = assembly.GetType("Copy." + key);
+                _comp.Add(key, type);
+            }
         }
 
         public override void Copy(object source, object target)
