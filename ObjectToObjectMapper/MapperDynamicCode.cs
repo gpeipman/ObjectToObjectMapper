@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime;
 using System.Runtime.Loader;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.Emit;
 
 namespace ObjectToObjectMapper
 {
@@ -52,13 +52,13 @@ namespace ObjectToObjectMapper
 
             string assemblyName = Path.GetRandomFileName();
             var refPaths = new[] {
-                typeof(System.Object).GetTypeInfo().Assembly.Location,
+                typeof(Object).GetTypeInfo().Assembly.Location,
                 typeof(Console).GetTypeInfo().Assembly.Location,
-                Path.Combine(Path.GetDirectoryName(typeof(System.Runtime.GCSettings).GetTypeInfo().Assembly.Location), "System.Runtime.dll"),
-                this.GetType().GetTypeInfo().Assembly.Location
+                Path.Combine(Path.GetDirectoryName(typeof(GCSettings).GetTypeInfo().Assembly.Location), "System.Runtime.dll"),
+                GetType().GetTypeInfo().Assembly.Location
             };
 
-            MetadataReference[] references = refPaths.Select(r => MetadataReference.CreateFromFile(r)).ToArray();
+            var references = refPaths.Select(r => MetadataReference.CreateFromFile(r)).ToArray();
 
             var compilation = CSharpCompilation.Create(
                 assemblyName,
@@ -68,10 +68,10 @@ namespace ObjectToObjectMapper
 
             using(var ms = new MemoryStream())
             {
-                EmitResult result = compilation.Emit(ms);
+                var result = compilation.Emit(ms);
                 ms.Seek(0, SeekOrigin.Begin);
 
-                Assembly assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
+                var assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
                 var type = assembly.GetType("Copy." + key);
                 _comp.Add(key, type);
             }
