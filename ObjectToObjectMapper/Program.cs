@@ -33,7 +33,9 @@ namespace ObjectToObjectMapper
                                     new MapperUnoptimized(),
                                     new MapperOptimized(),
                                     new MapperDynamicCode(),
-                                    new MapperLcg()
+                                    new MapperLcg(),
+                                    new MapperLcg2<OrderModel>(),
+                                    new MapperManual(),
                               };            
 
             var sourceType = source.GetType();
@@ -54,7 +56,7 @@ namespace ObjectToObjectMapper
 
                 stopper.Stop();
 
-                var time = stopper.ElapsedMilliseconds / (double)testRuns;
+                var time = stopper.ElapsedMilliseconds;
                 Console.WriteLine(mapper.GetType().Name + ": " + time);
             }
         }
@@ -82,7 +84,7 @@ namespace ObjectToObjectMapper
 
             stopper.Stop();
 
-            var time = stopper.ElapsedMilliseconds / (double)testRuns;
+            var time = stopper.ElapsedMilliseconds;
             Console.WriteLine("AutoMapper: " + time);
         }
     }
